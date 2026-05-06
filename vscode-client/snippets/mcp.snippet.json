@@ -1,0 +1,12 @@
+{
+  "_comment": "Drop-in snippet for ~/.vscode/mcp.json or <repo>/.vscode/mcp.json. Replace the URL and token, then reload the VS Code window.",
+  "mcpServers": {
+    "qualimetry": {
+      "type": "http",
+      "url": "https://myorg.qualimetry.io/mcp/",
+      "headers": {
+        "qualimetry-access-token": "REPLACE_WITH_YOUR_QUALIMETRY_ACCESS_TOKEN"
+      }
+    }
+  }
+}
