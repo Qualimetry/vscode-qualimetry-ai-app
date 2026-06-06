@@ -1,0 +1,113 @@
+name: CI (VS Code Extension)
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch: {}   # Run manually to create GitHub Release with VSIX
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Verify bundled skills are in place
+        run: |
+          for s in coding-standards review-check analysis-issues dependency-check; do
+            test -f "vscode-client/resources/skills/$s/SKILL.md" || (echo "Missing bundled skill: $s — publish-vscode-to-github.ps1 should have vendored these into vscode-client/resources/skills/" && exit 1)
+          done
+
+      - name: Build VS Code client
+        working-directory: vscode-client
+        run: |
+          npm install
+          npm run compile
+
+      - name: Set extension version (manifest is the source)
+        run: |
+          VERSION=$(node -p "require('./vscode-client/package.json').version")
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+
+      - name: Package VS Code extension
+        run: |
+          cp README.md vscode-client/README.md
+          cd vscode-client
+          npx vsce package --allow-missing-repository
+
+      - name: Upload VSIX artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: vsix
+          path: vscode-client/*.vsix
+
+  release:
+    needs: build
+    if: startsWith(github.event.head_commit.message, 'release:') || startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Build & package
+        run: |
+          # Skills are already vendored into vscode-client/resources/skills/
+          # by publish-vscode-to-github.ps1 — no submodule sync needed here.
+          cd vscode-client
+          npm install
+          npm run bundle
+          cp ../README.md README.md
+          npx vsce package --allow-missing-repository
+
+      - name: Extract version
+        id: version
+        run: |
+          VERSION=$(node -p "require('./vscode-client/package.json').version")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Extract release notes from CHANGELOG (fallback to commit message)
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          if [ -f CHANGELOG.md ]; then
+            awk "/^## \[${VERSION}\]/{flag=1; next} /^## \[/{flag=0} flag" CHANGELOG.md > release-notes.md
+          fi
+          if [ ! -s release-notes.md ]; then
+            echo "Release ${{ steps.version.outputs.version }}" > release-notes.md
+            echo "" >> release-notes.md
+            echo "${{ github.event.head_commit.message }}" >> release-notes.md
+          fi
+
+      # continue-on-error: if tag already exists (e.g. re-run), job still runs marketplace publishes below
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        continue-on-error: true
+        with:
+          tag_name: v${{ steps.version.outputs.version }}
+          name: v${{ steps.version.outputs.version }}
+          body_path: release-notes.md
+          files: vscode-client/*.vsix
+
+      - name: Publish to Visual Studio Marketplace
+        working-directory: vscode-client
+        run: npx vsce publish --packagePath "qualimetry-vscode-ai-app-${{ steps.version.outputs.version }}.vsix"
+        env:
+          VSCE_PAT: ${{ secrets.VSCE_PAT }}
+
+      - name: Publish to Open VSX (Cursor and other VS Code–compatible editors)
+        working-directory: vscode-client
+        run: npx ovsx publish "qualimetry-vscode-ai-app-${{ steps.version.outputs.version }}.vsix"
+        env:
+          OVSX_PAT: ${{ secrets.OVSX_PAT }}

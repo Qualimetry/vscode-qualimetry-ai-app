@@ -1,0 +1,86 @@
+{
+  "name": "qualimetry-vscode-ai-app",
+  "displayName": "Qualimetry AI App",
+  "description": "Enforces Qualimetry coding standards, principles, policies, and surfaces AI review + rules-based analysis findings inside VS Code (with GitHub Copilot) and Cursor.",
+  "version": "1.1.1",
+  "publisher": "qualimetry",
+  "license": "Apache-2.0",
+  "icon": "icon.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Qualimetry/vscode-qualimetry-ai-app.git"
+  },
+  "homepage": "https://qualimetry.ai",
+  "bugs": {
+    "url": "https://github.com/Qualimetry/vscode-qualimetry-ai-app/issues"
+  },
+  "engines": {
+    "vscode": "^1.99.0"
+  },
+  "categories": [
+    "Linters",
+    "Programming Languages",
+    "Other"
+  ],
+  "keywords": [
+    "qualimetry",
+    "compliance",
+    "code-review",
+    "mcp",
+    "coding-standards"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "qualimetry.setup",
+        "title": "Qualimetry: Setup",
+        "category": "Qualimetry"
+      },
+      {
+        "command": "qualimetry.installSkills",
+        "title": "Qualimetry: Install Skills to ~/.agents/skills",
+        "category": "Qualimetry"
+      },
+      {
+        "command": "qualimetry.complianceCheck",
+        "title": "Qualimetry: Check current file for review findings",
+        "category": "Qualimetry"
+      }
+    ],
+    "configuration": {
+      "title": "Qualimetry AI App",
+      "properties": {
+        "qualimetry.mcpServerUrl": {
+          "type": "string",
+          "default": "",
+          "description": "Qualimetry MCP server URL (e.g. https://myorg.qualimetry.io/mcp/). Set by the Qualimetry: Setup command. Per-user, not committed."
+        },
+        "qualimetry.scope": {
+          "type": "string",
+          "default": "user",
+          "enum": ["user", "workspace"],
+          "description": "Where the Qualimetry: Setup command writes the MCP server entry: user-global mcp.json, or this workspace's .vscode/mcp.json."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "bundle": "esbuild src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node --sourcemap --minify",
+    "vscode:prepublish": "npm run bundle",
+    "package": "vsce package --allow-missing-repository"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.99.0",
+    "@vscode/vsce": "^3.0.0",
+    "ovsx": "^0.10.0",
+    "esbuild": "^0.27.0",
+    "typescript": "^5.3.0"
+  }
+}
