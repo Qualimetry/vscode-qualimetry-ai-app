@@ -1,0 +1,20 @@
+{
+  "_comment": "Drop-in snippet for VS Code. User scope: Command Palette -> 'MCP: Open User Configuration' opens your user mcp.json - paste the keys below. Workspace scope: save as <repo>/.vscode/mcp.json. Replace the URL; VS Code prompts for the token on first start (it is never stored in this file). Note VS Code's top-level key is 'servers' - not 'mcpServers', and ~/.vscode/mcp.json is NOT a location VS Code reads.",
+  "servers": {
+    "qualimetry": {
+      "type": "http",
+      "url": "https://myorg.qualimetry.io/mcp/",
+      "headers": {
+        "qualimetry-access-token": "${input:qualimetry-token}"
+      }
+    }
+  },
+  "inputs": [
+    {
+      "id": "qualimetry-token",
+      "type": "promptString",
+      "description": "Qualimetry access token",
+      "password": true
+    }
+  ]
+}
